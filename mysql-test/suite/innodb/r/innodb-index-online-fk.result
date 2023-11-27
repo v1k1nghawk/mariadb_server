@@ -654,3 +654,45 @@ t2	CREATE TABLE `t2` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci
 drop table t2;
 drop table t1;
+#
+#  MDEV-29092  FOREIGN_KEY_CHECKS does not prevent non-copy
+#               alter from creating invalid FK structures
+#
+CREATE TABLE t1(f1 INT, KEY(f1),
+FOREIGN KEY(f1) references t1(f1))ENGINE=InnoDB;
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `f1` int(11) DEFAULT NULL,
+  KEY `f1` (`f1`),
+  CONSTRAINT `t1_ibfk_1` FOREIGN KEY (`f1`) REFERENCES `t1` (`f1`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci
+DROP TABLE t1;
+CREATE TABLE t1(f1 INT, KEY(f1), KEY(f1),
+FOREIGN KEY(f1) REFERENCES t1(f1))ENGINE=InnoDB;
+Warnings:
+Note	1831	Duplicate index `f1_2`. This is deprecated and will be disallowed in a future release
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `f1` int(11) DEFAULT NULL,
+  KEY `f1` (`f1`),
+  KEY `f1_2` (`f1`),
+  CONSTRAINT `t1_ibfk_1` FOREIGN KEY (`f1`) REFERENCES `t1` (`f1`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci
+ALTER TABLE t1 DROP KEY f1;
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `f1` int(11) DEFAULT NULL,
+  KEY `f1_2` (`f1`),
+  CONSTRAINT `t1_ibfk_1` FOREIGN KEY (`f1`) REFERENCES `t1` (`f1`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci
+ALTER TABLE t1 DROP KEY f1_2;
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `f1` int(11) DEFAULT NULL,
+  CONSTRAINT `t1_ibfk_1` FOREIGN KEY (`f1`) REFERENCES `t1` (`f1`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci
+DROP TABLE t1;
