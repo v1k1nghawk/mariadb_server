@@ -17,6 +17,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 *****************************************************************************/
 
 #pragma once
+#include <my_global.h>
 #include "univ.i"
 #include "rw_lock.h"
 
@@ -85,9 +86,11 @@ class srw_mutex_impl final
 #ifdef SUX_LOCK_GENERIC
 public:
   /** The mutex for the condition variables. */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   pthread_mutex_t mutex;
 private:
   /** Condition variable for the lock word. Used with mutex. */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   pthread_cond_t cond;
 #endif
 
@@ -483,7 +486,9 @@ public:
 template<bool spinloop>
 class srw_lock_impl
 {
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   PSI_rwlock *pfs_psi;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
 # if defined _WIN32 || defined SUX_LOCK_GENERIC
   srw_lock_<spinloop> lock;
 # else
