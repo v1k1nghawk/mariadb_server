@@ -166,15 +166,14 @@ struct log_t
 
 private:
   /** The log sequence number of the last change of durable InnoDB files */
-  alignas(CPU_LEVEL1_DCACHE_LINESIZE)
-  std::atomic<lsn_t> lsn;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<lsn_t> lsn;
   /** the first guaranteed-durable log sequence number */
-  std::atomic<lsn_t> flushed_to_disk_lsn;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<lsn_t> flushed_to_disk_lsn;
   /** log sequence number when log resizing was initiated, or 0 */
-  std::atomic<lsn_t> resize_lsn;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<lsn_t> resize_lsn;
   /** set when there may be need to initiate a log checkpoint.
   This must hold if lsn - last_checkpoint_lsn > max_checkpoint_age. */
-  std::atomic<bool> need_checkpoint;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<bool> need_checkpoint;
 
 #if defined(__aarch64__)
   /* On ARM, we do more spinning */
@@ -194,10 +193,10 @@ public:
   alignas(CPU_LEVEL1_DCACHE_LINESIZE) log_rwlock latch;
 private:
   /** mutex protecting buf_free et al, together with latch */
-  log_lsn_lock lsn_lock;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) log_lsn_lock lsn_lock;
 public:
   /** first free offset within buf use; protected by lsn_lock */
-  Atomic_relaxed<size_t> buf_free;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) Atomic_relaxed<size_t> buf_free;
   /** number of write requests (to buf); protected by lsn_lock */
   size_t write_to_buf;
   /** number of append_prepare_wait(); protected by lsn_lock */
