@@ -17,6 +17,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 *****************************************************************************/
 
 #pragma once
+#include <my_global.h>
 #include "univ.i"
 #include "rw_lock.h"
 
@@ -83,9 +84,11 @@ class srw_mutex_impl final
 #ifdef SUX_LOCK_GENERIC
 public:
   /** The mutex for the condition variables. */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   pthread_mutex_t mutex;
 private:
   /** Condition variable for the lock word. Used with mutex. */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   pthread_cond_t cond;
 #endif
 
@@ -167,9 +170,11 @@ class ssux_lock_impl final
   srw_mutex_impl<spinloop> writer;
 #ifdef SUX_LOCK_GENERIC
   /** Condition variable for "readers"; used with writer.mutex. */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   pthread_cond_t readers_cond;
 #endif
   /** S or U holders, and WRITER flag for X holder or waiter */
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
   std::atomic<uint32_t> readers;
   /** indicates an X request; readers=WRITER indicates granted X lock */
   static constexpr uint32_t WRITER= 1U << 31;
@@ -482,6 +487,7 @@ template<bool spinloop>
 class srw_lock_impl
 {
   PSI_rwlock *pfs_psi;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE);
 # if defined _WIN32 || defined SUX_LOCK_GENERIC
   srw_lock_<spinloop> lock;
 # else
