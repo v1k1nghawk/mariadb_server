@@ -324,9 +324,13 @@ inline lsn_t log_t::get_write_target() const
   return write_lsn + max_buf_free / 2;
 }
 
+lsn_spinlock lsnlck;
+
 /** Commit a mini-transaction. */
-void mtr_t::commit()
+void __attribute__((noinline)) mtr_t::commit()
 {
+  ulint delay_count= 0;
+  ulint delay_iterations= 50;
   ut_ad(is_active());
   ut_ad(!is_inside_ibuf());
 
@@ -344,7 +348,19 @@ void mtr_t::commit()
     }
 
     ut_ad(!srv_read_only_mode);
+    /* do_write is major point of contention */
+    while (lsnlck.lsn_try_lock() != true)
+    {
+    delay_count++;
+    if ((delay_count == 10) && delay_iterations <= 300) {
+    delay_count= 0;
+    delay_iterations += 50;
+    }
+    lsnlck.lsn_delay(delay_iterations);
+    }
     std::pair<lsn_t,page_flush_ahead> lsns{do_write()};
+    lsnlck.lsn_unlock();
+    /* do_write is major point of contention */
     process_freed_pages();
     size_t modified= 0;
     const lsn_t write_lsn= log_sys.get_write_target();
@@ -405,6 +421,7 @@ void mtr_t::commit()
       }
       else
         log_sys.latch.rd_unlock();
+
 
       for (auto it= m_memo.rbegin(); it != m_memo.rend(); )
       {
@@ -994,6 +1011,7 @@ inline void mtr_t::page_checksum(const buf_page_t &bpage)
 
 std::pair<lsn_t,mtr_t::page_flush_ahead> mtr_t::do_write()
 {
+
   ut_ad(!recv_no_log_write);
   ut_ad(is_logged());
   ut_ad(m_log.size());
@@ -1051,6 +1069,7 @@ std::pair<lsn_t,mtr_t::page_flush_ahead> mtr_t::do_write()
     }
     name_write();
   }
+
 func_exit:
   return finish_write(len);
 }

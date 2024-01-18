@@ -72,7 +72,7 @@ struct mtr_t {
   void start();
 
   /** Commit the mini-transaction. */
-  void commit();
+  void __attribute__ ((noinline)) commit();
 
   /** Release latches of unmodified buffer pages.
   @param begin   first slot to release
@@ -777,4 +777,38 @@ private:
   fil_space_t *m_freed_space= nullptr;
   /** set of freed page ids */
   range_set *m_freed_pages= nullptr;
+};
+
+struct lsn_spinlock {
+alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<bool> lock_ = {0};
+void __attribute__ ((noinline)) lsn_delay(ulint iterations) noexcept {
+        ulint   i;
+        for (i = 0; i < iterations; i++) {
+        __asm__ __volatile__ ("pause":::"memory");
+        }
+}
+
+__attribute__((noinline)) void lsn_lock() noexcept {
+    for (;;) {
+      if (!lock_.exchange(true, std::memory_order_acquire)) {
+        return;
+      }
+      while (lock_.load(std::memory_order_relaxed)) {
+        __asm__ __volatile__ ("pause":::"memory");
+      }
+    }
+  }
+
+__attribute__((noinline))  bool lsn_try_lock() noexcept {
+    return !lock_.load(std::memory_order_relaxed) &&
+           !lock_.exchange(true, std::memory_order_acquire);
+  }
+
+__attribute__((noinline)) void lsn_unlock() noexcept {
+    lock_.store(false, std::memory_order_release);
+  }
+
+__attribute__((noinline)) static void lsn_yield() noexcept {
+    std::this_thread::yield();
+}
 };

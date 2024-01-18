@@ -244,13 +244,30 @@ int cmp_data(ulint mtype, ulint prtype, bool descending,
     {
       if (ulint len= std::min(len1, len2))
       {
-        cmp= memcmp(data1, data2, len);
-        if (cmp)
-          goto func_exit;
-        data1+= len;
-        data2+= len;
-        len1-= len;
-        len2-= len;
+#if defined __i386__ || defined __x86_64__ || defined _M_IX86 || defined _M_X64 /* IA32 or AMD64 */
+          for (ulint i = 4 + (len & 3); i > 0; i--) {
+              cmp = int(*data1++) - int(*data2++);
+
+              if (cmp)
+                 goto func_exit;
+
+              if (!--len)
+                 break;
+          }
+
+          if (len) {
+#endif /* IA32 or AMD64 */
+              cmp = memcmp(data1, data2, len);
+              if (cmp)
+                  goto func_exit;
+
+              data1+= len;
+              data2+= len;
+              len1-= len;
+              len2-= len;
+#if defined __i386__ || defined __x86_64__ || defined _M_IX86 || defined _M_X64
+          }
+#endif /* IA32 or AMD64 */
       }
       if (len1)
       {
