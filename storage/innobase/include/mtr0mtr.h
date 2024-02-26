@@ -783,10 +783,8 @@ private:
 struct lsn_spinlock {
 alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic<bool> lock_ = {0};
 void __attribute__ ((noinline)) lsn_delay(ulint iterations) noexcept {
-        ulint   i;
-        for (i = 0; i < iterations; i++) {
-        __asm__ __volatile__ ("pause":::"memory");
-        }
+        while(iterations--)
+          __asm__ __volatile__ ("pause":::"memory");
 }
 
 __attribute__((noinline)) void lsn_lock() noexcept {

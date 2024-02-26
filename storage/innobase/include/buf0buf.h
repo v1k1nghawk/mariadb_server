@@ -1826,7 +1826,7 @@ public:
   Protected by buf_pool.mutex. */
   Atomic_relaxed<bool> try_LRU_scan;
   /** Whether we have warned to be running out of buffer pool */
-  std::atomic_flag LRU_warned;
+  alignas(CPU_LEVEL1_DCACHE_LINESIZE) std::atomic_flag LRU_warned;
 
 	/* @} */
 

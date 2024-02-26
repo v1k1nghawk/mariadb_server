@@ -351,12 +351,14 @@ void mtr_t::commit()
     /* do_write is major point of contention */
     while (lsnlck.lsn_try_lock() != true)
     {
-    delay_count++;
-    if ((delay_count == 10) && delay_iterations <= 500) {
-    delay_count= 0;
-    delay_iterations += 50;
-    }
-    lsnlck.lsn_delay(delay_iterations);
+      if (delay_iterations <= 500) {
+        if (delay_count == 10) {
+          delay_count= 0;
+          delay_iterations += 50;
+        } else
+          ++delay_count;
+      }
+      lsnlck.lsn_delay(delay_iterations);
     }
     std::pair<lsn_t,page_flush_ahead> lsns{do_write()};
     lsnlck.lsn_unlock();
