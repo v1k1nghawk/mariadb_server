@@ -21,9 +21,11 @@
   This file defines all vector functions
 */
 
+#include <x86intrin.h>
 #include <my_global.h>
 #include "item.h"
 #include "item_vectorfunc.h"
+
 
 key_map Item_func_vec_distance::part_of_sortkey() const
 {
@@ -54,13 +56,36 @@ double Item_func_vec_distance::val_real()
 
 double euclidean_vec_distance(float *v1, float *v2, size_t v_len)
 {
-  float *p1= v1;
-  float *p2= v2;
-  double d= 0;
-  for (size_t i= 0; i < v_len; p1++, p2++, i++)
-  {
-    float dist= *p1 - *p2;
-    d+= dist * dist;
-  }
-  return d;
+    float *p1 = v1;
+    float *p2 = v2;
+    __m128d d = _mm_setzero_pd();
+
+    size_t i;
+    // process 4 elems per cycle
+    for(i = 0; i < v_len - 3; i += 4)
+    {
+        const __m128 a = _mm_loadu_ps(p1 + i);
+        const __m128 b = _mm_loadu_ps(p2 + i);
+
+        const __m128d c = _mm_cvtps_pd(_mm_sub_ps(a, b)); // c = a - b
+        const __m128d dist = _mm_mul_pd(c, c); // dist = c * c
+
+        d = _mm_add_pd(d, dist); // d += dist
+    }
+
+    // process vectors' tail (3 elems at max)
+    for(; i < v_len; ++i)
+    {
+        const __m128 a = _mm_load_ss(p1 + i);
+        const __m128 b = _mm_load_ss(p2 + i);
+
+        const __m128d c = _mm_cvtps_pd(_mm_sub_ps(a, b));
+        const __m128d dist = _mm_mul_pd(c, c);
+
+        d = _mm_add_pd(d, dist);
+    }
+
+    d = _mm_hadd_pd(d, d);
+    d = _mm_hadd_pd(d, d);
+    return _mm_cvtsd_f64(_mm_unpackhi_pd(d, d));
 }
